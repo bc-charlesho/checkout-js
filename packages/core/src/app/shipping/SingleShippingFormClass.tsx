@@ -31,7 +31,6 @@ import { getCustomFormFieldsValidationSchema } from '../formFields';
 import { PaymentMethodId } from '../payment/paymentMethod';
 import { Fieldset, Form } from '../ui/form';
 
-import BillingSameAsShippingField from './BillingSameAsShippingField';
 import hasSelectedShippingOptions from './hasSelectedShippingOptions';
 import isSelectedShippingOptionValid from './isSelectedShippingOptionValid';
 import ShippingAddress from './ShippingAddress';
@@ -40,7 +39,6 @@ import ShippingFormFooter from './ShippingFormFooter';
 
 export interface SingleShippingFormProps {
     hideBillingSameAsShippingCheck: boolean;
-    isBillingSameAsShipping: boolean;
     cartHasChanged: boolean;
     consignments: Consignment[];
     customerMessage: string;
@@ -68,7 +66,6 @@ export interface SingleShippingFormProps {
 }
 
 export interface SingleShippingFormValues {
-    billingSameAsShipping: boolean;
     shippingAddress?: AddressFormValues;
     orderComment: string;
 }
@@ -142,7 +139,6 @@ class SingleShippingForm extends PureComponent<
             setValues,
             getFields,
             shippingAddress,
-            isBillingSameAsShipping,
             customerMessage,
             values,
             setFieldValue,
@@ -167,7 +163,6 @@ class SingleShippingForm extends PureComponent<
         // This is for executing extension command, `ReRenderShippingForm`.
         if (newShippingFormRenderTimestamp !== shippingFormRenderTimestamp) {
             setValues({
-                billingSameAsShipping: isBillingSameAsShipping,
                 orderComment: customerMessage,
                 shippingAddress: mapAddressToFormValues(
                     getFields(shippingAddress && shippingAddress.countryCode),
@@ -179,7 +174,6 @@ class SingleShippingForm extends PureComponent<
 
     render(): ReactNode {
         const {
-            hideBillingSameAsShippingCheck,
             cartHasChanged,
             isInitialValueLoaded,
             isLoading,
@@ -201,11 +195,6 @@ class SingleShippingForm extends PureComponent<
         const { isResettingAddress, isUpdatingShippingData, hasRequestedShippingOptions } =
             this.state;
 
-        const PAYMENT_METHOD_VALID = ['amazonpay'];
-        const shouldShowBillingSameAsShipping =
-            !hideBillingSameAsShippingCheck &&
-            !PAYMENT_METHOD_VALID.some((method) => method === methodId);
-
         return (
             <Form autoComplete="on">
                 <Fieldset>
@@ -225,11 +214,6 @@ class SingleShippingForm extends PureComponent<
                         shippingAddress={shippingAddress}
                         validateMaxLength={validateMaxLength}
                     />
-                    {shouldShowBillingSameAsShipping && (
-                        <div className="form-body">
-                            <BillingSameAsShippingField />
-                        </div>
-                    )}
                 </Fieldset>
 
                 <ShippingFormFooter
@@ -365,10 +349,8 @@ export default withLanguage(
         mapPropsToValues: ({
             getFields,
             shippingAddress,
-            isBillingSameAsShipping,
             customerMessage,
         }) => ({
-            billingSameAsShipping: isBillingSameAsShipping,
             orderComment: customerMessage,
             shippingAddress: mapAddressToFormValues(
                 getFields(shippingAddress && shippingAddress.countryCode),

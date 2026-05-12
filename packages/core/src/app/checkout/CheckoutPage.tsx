@@ -253,8 +253,7 @@ const Checkout = ({
 
         const isDefaultStepPaymentOrBilling =
             !activeStepType &&
-            (defaultStepType === CheckoutStepType.Payment ||
-                defaultStepType === CheckoutStepType.Billing);
+            defaultStepType === CheckoutStepType.Payment;
 
         const isShippingStepFinished =
             findIndex(stepsRef.current, { type: CheckoutStepType.Shipping }) <
@@ -346,13 +345,8 @@ const Checkout = ({
 
     const handleShippingNextStep = useCallback((isBillingSameAsShipping: boolean): void => {
         setState(prev => ({ ...prev, isBillingSameAsShipping }));
-
-        if (isBillingSameAsShipping) {
-            navigateToNextIncompleteStep();
-        } else {
-            navigateToStep(CheckoutStepType.Billing);
-        }
-    }, [navigateToNextIncompleteStep, navigateToStep]);
+        navigateToNextIncompleteStep();
+    }, [navigateToNextIncompleteStep]);
 
     const handleShippingSignIn = useCallback((): void => {
         setCustomerViewType(CustomerViewType.Login);

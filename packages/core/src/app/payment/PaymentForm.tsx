@@ -14,6 +14,7 @@ import { isExperimentEnabled } from '../common/utility';
 import { TermsConditions } from '../termsConditions';
 import { Fieldset, Form, Legend } from '../ui/form';
 
+import { useBillingAddressSection } from './BillingAddressContext';
 import getPaymentValidationSchema from './getPaymentValidationSchema';
 import { NoPaymentMethods } from './NoPaymentMethods';
 import {
@@ -21,6 +22,8 @@ import {
     getUniquePaymentMethodId,
     PaymentMethodId,
     PaymentMethodList,
+    PaymentMethodProviderType,
+    PaymentMethodType,
 } from './paymentMethod';
 import PaymentRedeemables from './PaymentRedeemables';
 import PaymentSubmitButton from './PaymentSubmitButton';
@@ -32,8 +35,10 @@ export interface PaymentFormProps {
     defaultGatewayId?: string;
     defaultMethodId: string;
     didExceedSpamLimit?: boolean;
+    isBillingSameAsShipping?: boolean;
     isEmbedded?: boolean;
     isInitializingPayment?: boolean;
+    isShippingRequired?: boolean;
     isTermsConditionsRequired?: boolean;
     isUsingMultiShipping?: boolean;
     isStoreCreditApplied: boolean;
@@ -53,6 +58,7 @@ export interface PaymentFormProps {
     onSubmit?(values: PaymentFormValues): void;
     onUnhandledError?(error: Error): void;
 }
+
 
 const PaymentForm: FunctionComponent<
     PaymentFormProps & FormikProps<PaymentFormValues> & WithLanguageProps
@@ -110,6 +116,7 @@ const PaymentForm: FunctionComponent<
     }, [selectedMethod]);
 
     const { checkoutState } = useCheckout();
+    const { billingSection } = useBillingAddressSection();
     const { checkoutSettings } = checkoutState.data.getConfig() ?? {};
     const shouldShowSubmitButtonWhenPaymentNotRequired = isExperimentEnabled(checkoutSettings, 'CHECKOUT-9729.show_submit_button_when_payment_not_required', false);
     const hideSubmitPaymentButton = shouldHidePaymentSubmitButton || (shouldShowSubmitButtonWhenPaymentNotRequired && isPaymentDataRequired() && isEmpty(methods));
@@ -154,6 +161,10 @@ const PaymentForm: FunctionComponent<
                     values={values}
                 />
             }
+
+            {selectedMethod?.method !== PaymentMethodType.CreditCard
+                && selectedMethod?.type !== PaymentMethodProviderType.Api
+                && billingSection}
 
             <PaymentRedeemables />
 

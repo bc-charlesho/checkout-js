@@ -13,7 +13,6 @@ import { debounce, type DebouncedFunc, isEqual, noop } from 'lodash';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { lazy, object } from 'yup';
 
-import { useCapabilities } from '@bigcommerce/checkout/contexts';
 import { withLanguage, type WithLanguageProps } from '@bigcommerce/checkout/locale';
 
 import {
@@ -31,7 +30,6 @@ import { getAddressExtraFieldsValidationSchema, getCustomFormFieldsValidationSch
 import { PaymentMethodId } from '../payment/paymentMethod';
 import { Fieldset, Form } from '../ui/form';
 
-import BillingSameAsShippingField from './BillingSameAsShippingField';
 import hasSelectedShippingOptions from './hasSelectedShippingOptions';
 import isSelectedShippingOptionValid from './isSelectedShippingOptionValid';
 import ShippingAddress from './ShippingAddress';
@@ -39,7 +37,6 @@ import { SHIPPING_ADDRESS_FIELDS } from './ShippingAddressFields';
 import ShippingFormFooter from './ShippingFormFooter';
 
 export interface SingleShippingFormProps {
-    isBillingSameAsShipping: boolean;
     cartHasChanged: boolean;
     consignments: Consignment[];
     customerMessage: string;
@@ -66,7 +63,6 @@ export interface SingleShippingFormProps {
 }
 
 export interface SingleShippingFormValues {
-    billingSameAsShipping: boolean;
     shippingAddress?: AddressFormValues;
     orderComment: string;
 }
@@ -82,7 +78,6 @@ function shouldHaveCustomValidation(methodId?: string): boolean {
 
 export const SHIPPING_AUTOSAVE_DELAY = 1700;
 
-const PAYMENT_METHOD_VALID = ['amazonpay'];
 
 const SingleShippingForm: React.FC<
     SingleShippingFormProps & WithLanguageProps & FormikProps<SingleShippingFormValues>
@@ -94,7 +89,6 @@ const SingleShippingForm: React.FC<
         deleteConsignments,
         getFields,
         initialize,
-        isBillingSameAsShipping,
         isInitialValueLoaded,
         isLoading,
         isShippingStepPending,
@@ -112,8 +106,6 @@ const SingleShippingForm: React.FC<
         updateAddress,
         values,
     }) => {
-    const { shipping: { hideBillingSameAsShippingCheck } } = useCapabilities();
-
     const propsRef = useRef({ values, shippingAddress, isValid });
     const debouncedUpdateAddressRef = useRef<
         DebouncedFunc<(address: Address, includeShippingOptions: boolean) => Promise<void>> | undefined
@@ -186,7 +178,6 @@ const SingleShippingForm: React.FC<
     useEffect(() => {
         if (shippingFormRenderTimestamp) {
             setValues({
-                billingSameAsShipping: isBillingSameAsShipping,
                 orderComment: customerMessage,
                 shippingAddress: mapAddressToFormValues(
                     getFields(shippingAddress?.countryCode),
@@ -284,10 +275,6 @@ const SingleShippingForm: React.FC<
         );
     };
 
-    const shouldShowBillingSameAsShipping =
-        !hideBillingSameAsShippingCheck &&
-        !PAYMENT_METHOD_VALID.some((method) => method === methodId);
-
     return (
         <Form autoComplete="on">
             <Fieldset>
@@ -307,11 +294,6 @@ const SingleShippingForm: React.FC<
                     shippingAddress={shippingAddress}
                     validateMaxLength={validateMaxLength}
                 />
-                {shouldShowBillingSameAsShipping && (
-                    <div className="form-body">
-                        <BillingSameAsShippingField />
-                    </div>
-                )}
             </Fieldset>
 
             <ShippingFormFooter
@@ -337,10 +319,8 @@ export default withLanguage(
         mapPropsToValues: ({
             getFields,
             shippingAddress,
-            isBillingSameAsShipping,
             customerMessage,
         }) => ({
-            billingSameAsShipping: isBillingSameAsShipping,
             orderComment: customerMessage,
             shippingAddress: mapAddressToFormValues(
                 getFields(shippingAddress?.countryCode),

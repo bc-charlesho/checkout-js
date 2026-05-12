@@ -94,7 +94,7 @@ const StripeShippingAddress: FunctionComponent<StripeShippingAddressProps> = (pr
         if (hasStripeAddressAndHasShippingOptions && afterReload && isLoadingBeforeAutoStep) {
             isStripeLoading();
             isStripeAutoStep();
-            onSubmit({ billingSameAsShipping: true, shippingAddress: stripeShippingAddress, orderComment: '' });
+            onSubmit({ shippingAddress: stripeShippingAddress, orderComment: '' });
         }
     }, [isFirstShippingRender, onSubmit, stripeShippingAddress, shouldDisableSubmit, isShippingMethodLoading, isNewAddress ,consignments]);
 

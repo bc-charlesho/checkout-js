@@ -13,7 +13,6 @@ import SingleShippingFormClassComponent from './SingleShippingFormClass';
 
 export interface ShippingFormProps {
     cartHasChanged: boolean;
-    isBillingSameAsShipping: boolean;
     isMultiShippingMode: boolean;
     isInitialValueLoaded: boolean;
     onCreateAccount(): void;
@@ -26,7 +25,6 @@ export interface ShippingFormProps {
 
 const ShippingForm = ({
     cartHasChanged,
-    isBillingSameAsShipping,
     isMultiShippingMode,
     onMultiShippingSubmit,
     onSingleShippingSubmit,
@@ -101,7 +99,6 @@ const ShippingForm = ({
             deleteConsignments,
             getFields,
             initialize,
-            isBillingSameAsShipping,
             isInitialValueLoaded,
             isLoading,
             isShippingStepPending,

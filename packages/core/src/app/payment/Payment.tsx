@@ -1,4 +1,5 @@
 import {
+    type Address,
     type Cart,
     type CartStockPositionsChangedError,
     type Checkout,
@@ -6,6 +7,7 @@ import {
     type CheckoutService,
     type CheckoutSettings,
     type Consignment,
+    type FormField,
     type OrderFinalizeOptions,
     type OrderRequestBody,
     type PaymentMethod,
@@ -38,7 +40,9 @@ import { type PaymentFormValues } from '@bigcommerce/checkout/payment-integratio
 import { ChecklistSkeleton } from '@bigcommerce/checkout/ui';
 
 import { withAnalytics } from '../analytics';
+import { B2BExtraFieldsSessionStorage, mapAddressFromFormValues } from '../address';
 import { withCheckout } from '../checkout';
+import { itemsRequireShipping } from '../shipping';
 import {
     ErrorModal,
     type ErrorModalOnCloseProps,
@@ -49,6 +53,8 @@ import {
 import { EMPTY_ARRAY, isExperimentEnabled } from '../common/utility';
 import { TermsConditionsType } from '../termsConditions';
 
+import BillingAddressSection, { type BillingAddressSectionHandle } from './BillingAddressSection';
+import { BillingAddressSectionContext } from './BillingAddressContext';
 import CartStockPositionsChangedModal from './CartStockPositionsChangedModal';
 import mapSubmitOrderErrorMessage, { mapSubmitOrderErrorTitle } from './mapSubmitOrderErrorMessage';
 import mapToOrderRequestBody from './mapToOrderRequestBody';
@@ -143,6 +149,10 @@ export interface PaymentProps {
 
 interface WithCheckoutPaymentProps {
     availableStoreCredit: number;
+    billingAddress?: Address;
+    shippingAddress?: Address;
+    checkoutBillingSameAsShippingEnabled: boolean;
+    isShippingRequired: boolean;
     cart?: Cart;
     consignments?: Consignment[];
     cartUrl: string;
@@ -163,10 +173,13 @@ interface WithCheckoutPaymentProps {
     applyStoreCredit(useStoreCredit: boolean): Promise<CheckoutSelectors>;
     clearError(error: Error): void;
     finalizeOrderIfNeeded(options: OrderFinalizeOptions): Promise<CheckoutSelectors>;
+    getBillingAddressFields(countryCode?: string): FormField[];
     isPaymentDataRequired(): boolean;
+    loadBillingAddressFields(): Promise<CheckoutSelectors>;
     loadCheckout(): Promise<CheckoutSelectors>;
     loadPaymentMethods(): Promise<CheckoutSelectors>;
     submitOrder(values: OrderRequestBody): Promise<CheckoutSelectors>;
+    updateBillingAddress(address: Partial<Address>): Promise<CheckoutSelectors>;
     checkoutServiceSubscribe: CheckoutService['subscribe'];
 }
 
@@ -193,11 +206,15 @@ const Payment= (props: PaymentProps & WithCheckoutPaymentProps & WithLanguagePro
     });
 
     const [isCartStockRefreshComplete, setIsCartStockRefreshComplete] = useState(false);
+    const [billingSameAsShipping, setBillingSameAsShipping] = useState<boolean>(
+        (props.isUsingMultiShipping || !props.isShippingRequired) ? false : props.checkoutBillingSameAsShippingEnabled,
+    );
 
     const isReadyRef = useRef(state.isReady);
     const grandTotalChangeUnsubscribe = useRef<() => void>();
     const validationSchemasRef = useRef<validationSchemas>({});
     const lastFormValuesRef = useRef<PaymentFormValues | null>(null);
+    const billingAddressRef = useRef<BillingAddressSectionHandle>(null);
 
     const renderCartStockPositionsChangedModal = (
       error: CartStockPositionsChangedError,
@@ -440,6 +457,8 @@ const Payment= (props: PaymentProps & WithCheckoutPaymentProps & WithLanguagePro
             onSubmit = noop,
             onSubmitError = noop,
             submitOrder,
+            shippingAddress,
+            updateBillingAddress,
             analyticsTracker
         } = props;
 
@@ -456,6 +475,18 @@ const Payment= (props: PaymentProps & WithCheckoutPaymentProps & WithLanguagePro
         }
 
         try {
+            if (billingSameAsShipping && shippingAddress) {
+                await updateBillingAddress(shippingAddress);
+            } else {
+                const billingFormValues = billingAddressRef.current?.getValues();
+
+                if (billingFormValues) {
+                    await updateBillingAddress(
+                        mapAddressFromFormValues(billingFormValues, B2BExtraFieldsSessionStorage.BILLING_KEY),
+                    );
+                }
+            }
+
             const state = await submitOrder(mapToOrderRequestBody(values, isPaymentDataRequired()));
             const order = state.data.getOrder();
 
@@ -479,7 +510,7 @@ const Payment= (props: PaymentProps & WithCheckoutPaymentProps & WithLanguagePro
 
             onSubmitError(error);
         }
-    }, [props.defaultMethod, state.selectedMethod, props.isPaymentDataRequired()]);
+    }, [props.defaultMethod, state.selectedMethod, props.isPaymentDataRequired(), billingSameAsShipping]);
 
     const trackSelectedPaymentMethod = (method: PaymentMethod) => {
         const { analyticsTracker } = props;
@@ -608,7 +639,10 @@ const Payment= (props: PaymentProps & WithCheckoutPaymentProps & WithLanguagePro
                 await handleStoreCreditChange(true);
             }
 
-            await loadPaymentMethodsOrThrow();
+            await Promise.all([
+                loadPaymentMethodsOrThrow(),
+                props.loadBillingAddressFields(),
+            ]);
 
             try {
                 const state = await finalizeOrderIfNeeded({
@@ -674,41 +708,59 @@ const Payment= (props: PaymentProps & WithCheckoutPaymentProps & WithLanguagePro
         selectedMethod && getUniquePaymentMethodId(selectedMethod.id, selectedMethod.gateway);
     const shouldShowPaymentForm = props.shouldShowSubmitPaymentButton || (!isEmpty(props.methods) && props.defaultMethod);
 
-    return (
-        <PaymentContext.Provider value={getContextValue()}>
-            <ChecklistSkeleton isLoading={!state.isReady}>
-                {shouldShowPaymentForm &&
-                    <PaymentForm
-                        availableStoreCredit={props.availableStoreCredit}
-                        defaultGatewayId={props.defaultMethod?.gateway}
-                        defaultMethodId={props.defaultMethod?.id || ''}
-                        didExceedSpamLimit={state.didExceedSpamLimit}
-                        isEmbedded={props.isEmbedded}
-                        isInitializingPayment={props.isInitializingPayment}
-                        isPaymentDataRequired={props.isPaymentDataRequired}
-                        isStoreCreditApplied = {props.isStoreCreditApplied}
-                        isTermsConditionsRequired={props.isTermsConditionsRequired}
-                        isUsingMultiShipping={props.isUsingMultiShipping}
-                        methods={props.methods}
-                        onMethodSelect={setSelectedMethod}
-                        onStoreCreditChange={handleStoreCreditChange}
-                        onSubmit={handleSubmit}
-                        onUnhandledError={handleError}
-                        selectedMethod={state.selectedMethod}
-                        shouldDisableSubmit={(uniqueSelectedMethodId && state.shouldDisableSubmit[uniqueSelectedMethodId]) || undefined}
-                        shouldExecuteSpamCheck = {props.shouldExecuteSpamCheck}
-                        shouldHidePaymentSubmitButton={(uniqueSelectedMethodId && props.isPaymentDataRequired() && state.shouldHidePaymentSubmitButton[uniqueSelectedMethodId]) || undefined}
-                        termsConditionsText={props.termsConditionsText}
-                        termsConditionsUrl={props.termsConditionsUrl}
-                        usableStoreCredit={props.usableStoreCredit}
-                        validationSchema={(uniqueSelectedMethodId && validationSchemasRef.current[uniqueSelectedMethodId]) || undefined}
-                    />
-                }
-            </ChecklistSkeleton>
+    const billingSectionNode = (
+        <BillingAddressSection
+            ref={billingAddressRef}
+            billingAddress={props.billingAddress}
+            getFields={props.getBillingAddressFields}
+            isBillingSameAsShipping={billingSameAsShipping}
+            isShippingRequired={props.isShippingRequired}
+            isUsingMultiShipping={props.isUsingMultiShipping}
+            methodId={state.selectedMethod?.id}
+            onBillingSameAsShippingChange={setBillingSameAsShipping}
+            onUnhandledError={handleError}
+        />
+    );
 
-            {renderOrderErrorModal()}
-            {renderEmbeddedSupportErrorModal()}
-        </PaymentContext.Provider>
+    return (
+        <BillingAddressSectionContext.Provider value={{ billingSection: billingSectionNode }}>
+            <PaymentContext.Provider value={getContextValue()}>
+                <ChecklistSkeleton isLoading={!state.isReady}>
+                    {shouldShowPaymentForm &&
+                        <PaymentForm
+                            availableStoreCredit={props.availableStoreCredit}
+                            defaultGatewayId={props.defaultMethod?.gateway}
+                            defaultMethodId={props.defaultMethod?.id || ''}
+                            didExceedSpamLimit={state.didExceedSpamLimit}
+                            isEmbedded={props.isEmbedded}
+                            isInitializingPayment={props.isInitializingPayment}
+                            isBillingSameAsShipping={billingSameAsShipping}
+                            isPaymentDataRequired={props.isPaymentDataRequired}
+                            isStoreCreditApplied={props.isStoreCreditApplied}
+                            isTermsConditionsRequired={props.isTermsConditionsRequired}
+                            isShippingRequired={props.isShippingRequired}
+                            isUsingMultiShipping={props.isUsingMultiShipping}
+                            methods={props.methods}
+                            onMethodSelect={setSelectedMethod}
+                            onStoreCreditChange={handleStoreCreditChange}
+                            onSubmit={handleSubmit}
+                            onUnhandledError={handleError}
+                            selectedMethod={selectedMethod}
+                            shouldDisableSubmit={(uniqueSelectedMethodId && state.shouldDisableSubmit[uniqueSelectedMethodId]) || undefined}
+                            shouldExecuteSpamCheck={props.shouldExecuteSpamCheck}
+                            shouldHidePaymentSubmitButton={(uniqueSelectedMethodId && props.isPaymentDataRequired() && state.shouldHidePaymentSubmitButton[uniqueSelectedMethodId]) || undefined}
+                            termsConditionsText={props.termsConditionsText}
+                            termsConditionsUrl={props.termsConditionsUrl}
+                            usableStoreCredit={props.usableStoreCredit}
+                            validationSchema={(uniqueSelectedMethodId && validationSchemasRef.current[uniqueSelectedMethodId]) || undefined}
+                        />
+                    }
+                </ChecklistSkeleton>
+
+                {renderOrderErrorModal()}
+                {renderEmbeddedSupportErrorModal()}
+            </PaymentContext.Provider>
+        </BillingAddressSectionContext.Provider>
     );
 }
 
@@ -718,6 +770,8 @@ export function mapToPaymentProps({
 }: CheckoutContextProps): WithCheckoutPaymentProps | null {
     const {
         data: {
+            getBillingAddress,
+            getBillingAddressFields,
             getCart,
             getCheckout,
             getConfig,
@@ -726,6 +780,7 @@ export function mapToPaymentProps({
             getOrder,
             getPaymentMethod,
             getPaymentMethods,
+            getShippingAddress,
             isPaymentDataRequired,
             getPaymentProviderCustomer,
         },
@@ -767,6 +822,11 @@ export function mapToPaymentProps({
     return {
         applyStoreCredit: checkoutService.applyStoreCredit,
         availableStoreCredit: customer.storeCredit,
+        billingAddress: getBillingAddress(),
+        shippingAddress: getShippingAddress(),
+        checkoutBillingSameAsShippingEnabled:
+            config.checkoutSettings.checkoutBillingSameAsShippingEnabled ?? true,
+        isShippingRequired: itemsRequireShipping(getCart(), config),
         cart: getCart(),
         consignments,
         cartUrl: config.links.cartLink,
@@ -774,6 +834,8 @@ export function mapToPaymentProps({
         defaultMethod,
         finalizeOrderError: getFinalizeOrderError(),
         finalizeOrderIfNeeded: checkoutService.finalizeOrderIfNeeded,
+        getBillingAddressFields,
+        loadBillingAddressFields: checkoutService.loadBillingAddressFields,
         loadCheckout: checkoutService.loadCheckout,
         isInitializingPayment: isInitializingPayment(),
         isPaymentDataRequired,
@@ -788,6 +850,7 @@ export function mapToPaymentProps({
         shouldShowSubmitPaymentButton: isExperimentEnabled(config.checkoutSettings, 'CHECKOUT-9729.show_submit_button_when_payment_not_required', false),
         submitOrder: checkoutService.submitOrder,
         submitOrderError: getSubmitOrderError(),
+        updateBillingAddress: checkoutService.updateBillingAddress,
         checkoutServiceSubscribe: checkoutService.subscribe,
         termsConditionsText:
             isTermsConditionsRequired && termsConditionsType === TermsConditionsType.TextArea

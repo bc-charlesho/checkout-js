@@ -46,7 +46,6 @@ function Shipping({
     const [isMultiShippingUnavailableModalOpen, setIsMultiShippingUnavailableModalOpen] = useState(false);
 
     const {
-        billingAddress,
         customerMessage,
         cartHasPromotionalItems,
         consignments,
@@ -56,13 +55,11 @@ function Shipping({
         loadShippingAddressFields,
         loadBillingAddressFields,
         loadShippingOptions,
-        methodId,
         shippingAddress,
         shouldRenderStripeForm,
         shouldShowMultiShipping,
         updateCheckout,
         updateShippingAddress,
-        updateBillingAddress,
     } = useShipping();
 
     useEffect(() => {
@@ -115,22 +112,9 @@ function Shipping({
     const handleSingleShippingSubmit = async (values: SingleShippingFormValues) => {
         const updatedShippingAddress = values.shippingAddress && mapAddressFromFormValues(values.shippingAddress, B2BExtraFieldsSessionStorage.SHIPPING_KEY);
         const promises: Array<Promise<CheckoutSelectors>> = [];
-        const hasRemoteBilling = hasRemoteBillingFn(methodId);
 
         if (!isEqualAddress(updatedShippingAddress, shippingAddress) || shippingAddress?.shouldSaveAddress !== updatedShippingAddress?.shouldSaveAddress) {
             promises.push(updateShippingAddress(updatedShippingAddress || {}));
-        }
-
-        if (values.billingSameAsShipping && updatedShippingAddress && !hasRemoteBilling) {
-            const shippingExtraFields = B2BExtraFieldsSessionStorage.getFields(B2BExtraFieldsSessionStorage.SHIPPING_KEY);
-
-            if (shippingExtraFields) {
-                B2BExtraFieldsSessionStorage.setFields(B2BExtraFieldsSessionStorage.BILLING_KEY, shippingExtraFields);
-            }
-
-            if (!isEqualAddress(updatedShippingAddress, billingAddress)) {
-                promises.push(updateBillingAddress(updatedShippingAddress));
-            }
         }
 
         if (customerMessage !== values.orderComment) {
@@ -139,7 +123,7 @@ function Shipping({
 
         try {
             await Promise.all(promises);
-            navigateNextStep(values.billingSameAsShipping);
+            navigateNextStep(true);
         } catch (error) {
             if (error instanceof Error) {
                 onUnhandledError(error);
@@ -153,18 +137,12 @@ function Shipping({
                 await updateCheckout({ customerMessage: values.orderComment });
             }
 
-            navigateNextStep(false);
+            navigateNextStep(true);
         } catch (error) {
             if (error instanceof Error) {
                 onUnhandledError(error);
             }
         }
-    }
-
-    function hasRemoteBillingFn(methodId?: string) {
-        const PAYMENT_METHOD_VALID = ['amazonpay'];
-
-        return PAYMENT_METHOD_VALID.some((method) => method === methodId);
     }
 
     if (shouldRenderStripeForm && !customer.email && countries.length > 0) {
@@ -214,7 +192,6 @@ function Shipping({
                 />
                 <ShippingForm
                     cartHasChanged={cartHasChanged}
-                    isBillingSameAsShipping={isBillingSameAsShipping}
                     isInitialValueLoaded={!isInitializing}
                     isMultiShippingMode={isMultiShippingMode}
                     onCreateAccount={onCreateAccount}

@@ -121,7 +121,7 @@ const getBillingStepStatus = createSelector(
                 isActive: false,
                 isComplete: isAmazonPayBillingStepComplete,
                 isEditable: isAmazonPayBillingStepComplete && hasCustomFields,
-                isRequired: true,
+                isRequired: false,
             };
         }
 
@@ -135,7 +135,7 @@ const getBillingStepStatus = createSelector(
                 isActive: false,
                 isComplete: hasAddress,
                 isEditable: hasAddress,
-                isRequired: true,
+                isRequired: false,
             };
         }
 
@@ -160,7 +160,7 @@ const getBillingStepStatus = createSelector(
                 isActive: false,
                 isComplete: hasAddress,
                 isEditable: hasAddress,
-                isRequired: true,
+                isRequired: false,
             };
         }
 
@@ -169,7 +169,7 @@ const getBillingStepStatus = createSelector(
             isActive: false,
             isComplete,
             isEditable: isComplete && !isUsingWallet,
-            isRequired: true,
+            isRequired: false,
         };
     },
 );
