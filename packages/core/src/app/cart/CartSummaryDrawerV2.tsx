@@ -62,7 +62,7 @@ const CartSummaryDrawerV2: FunctionComponent<CartSummaryDrawerV2Props> = ({ isMu
             className="cart-summary-toggle"
             onClick={() => setIsExpanded(!isExpanded)}
         >
-            <span className='body-regular'>
+            <span className='body-cta'>
                 <TranslatedString
                     id={isExpanded ? 'cart.hide_order_summary_action' : 'cart.show_order_summary_action'}
                 />

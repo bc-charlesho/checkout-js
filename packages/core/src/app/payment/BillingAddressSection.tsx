@@ -33,6 +33,7 @@ export interface BillingAddressSectionHandle {
 
 export interface BillingAddressSectionProps {
     billingAddress?: Address;
+    hideHeading?: boolean;
     isBillingSameAsShipping: boolean;
     isShippingRequired?: boolean;
     isUsingMultiShipping?: boolean;
@@ -171,6 +172,7 @@ const BillingAddressSection = forwardRef<BillingAddressSectionHandle, BillingAdd
     (
         {
             billingAddress,
+            hideHeading,
             isBillingSameAsShipping,
             isShippingRequired = true,
             isUsingMultiShipping,
@@ -207,12 +209,14 @@ const BillingAddressSection = forwardRef<BillingAddressSectionHandle, BillingAdd
         };
 
         return (
-            <div className="checkout-form" data-test="billing-address-section">
-                <div className="form-legend-container">
-                    <Legend testId="billing-address-heading">
-                        <TranslatedString id="billing.billing_address_heading" />
-                    </Legend>
-                </div>
+            <div className="checkout-form" data-test="billing-address-section" style={hideHeading ? { paddingBottom: '1rem' } : undefined}>
+                {!hideHeading && (
+                    <div className="form-legend-container">
+                        <Legend testId="billing-address-heading">
+                            <TranslatedString id="billing.billing_address_heading" />
+                        </Legend>
+                    </div>
+                )}
 
                 <Formik
                     enableReinitialize
@@ -222,7 +226,10 @@ const BillingAddressSection = forwardRef<BillingAddressSectionHandle, BillingAdd
                     {() => (
                         <>
                             {!shouldHideSameAsShippingCheckbox && (
-                                <div className="form-body">
+                                <div
+                                    className="form-body"
+                                    style={hideHeading ? { marginBottom: '1rem' } : undefined}
+                                >
                                     <BillingSameAsShippingField onChange={onBillingSameAsShippingChange} />
                                 </div>
                             )}

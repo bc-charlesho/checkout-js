@@ -28,6 +28,10 @@
             justify-content: space-between;
             padding: spacing("base") #{spacing("base") + spacing("base")};
             width: 100%;
+
+            svg {
+                fill: $color-highlightDarkest;
+            }
         }
 
         .cart-summary-header {

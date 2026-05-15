@@ -186,10 +186,12 @@ const AddressForm: React.FC<AddressFormProps> = ({
                 </div>
             </Fieldset>
             {shouldShowSaveAddress && (
-                <CheckboxFormField
-                    labelContent={<TranslatedString id="address.save_in_addressbook" />}
-                    name={fieldName ? `${fieldName}.shouldSaveAddress` : 'shouldSaveAddress'}
-                />
+                <div style={{ marginBottom: '1rem' }}>
+                    <CheckboxFormField
+                        labelContent={<TranslatedString id="address.save_in_addressbook" />}
+                        name={fieldName ? `${fieldName}.shouldSaveAddress` : 'shouldSaveAddress'}
+                    />
+                </div>
             )}
         </>
     );

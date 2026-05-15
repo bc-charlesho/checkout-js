@@ -23,6 +23,7 @@ import { LoadingOverlay } from '@bigcommerce/checkout/ui';
 import { withCheckout } from '../../checkout';
 import { connectFormik, type ConnectFormikProps } from '../../common/form';
 import { withForm, type WithFormProps } from '../../ui/form';
+import { BillingAddressSectionContext } from '../BillingAddressContext';
 import {
     configureCardValidator,
     CreditCardFieldset,
@@ -214,48 +215,55 @@ class CreditCardPaymentMethod extends Component<
             : false;
 
         return (
-            <LoadingOverlay hideContentWhenLoading isLoading={isLoading}>
-                <div className="paymentMethod paymentMethod--creditCard" data-test='credit-cart-payment-method'>
-                    {shouldShowInstrumentFieldset && (
-                        <CardInstrumentFieldset
-                            instruments={instruments}
-                            onDeleteInstrument={this.handleDeleteInstrument}
-                            onSelectInstrument={this.handleSelectInstrument}
-                            onUseNewInstrument={this.handleUseNewCard}
-                            selectedInstrumentId={
-                                selectedInstrument && selectedInstrument.bigpayToken
-                            }
-                            validateInstrument={
-                                getStoredCardValidationFieldset ? (
-                                    getStoredCardValidationFieldset(selectedInstrument)
-                                ) : (
-                                    <CreditCardValidation
-                                        shouldShowCardCodeField={shouldShowCardCodeField}
-                                        shouldShowNumberField={shouldShowNumberField}
+            <BillingAddressSectionContext.Consumer>
+                {({ billingSection }) => (
+                    <>
+                        <LoadingOverlay hideContentWhenLoading isLoading={isLoading}>
+                            <div className="paymentMethod paymentMethod--creditCard" data-test='credit-cart-payment-method'>
+                                {shouldShowInstrumentFieldset && (
+                                    <CardInstrumentFieldset
+                                        instruments={instruments}
+                                        onDeleteInstrument={this.handleDeleteInstrument}
+                                        onSelectInstrument={this.handleSelectInstrument}
+                                        onUseNewInstrument={this.handleUseNewCard}
+                                        selectedInstrumentId={
+                                            selectedInstrument && selectedInstrument.bigpayToken
+                                        }
+                                        validateInstrument={
+                                            getStoredCardValidationFieldset ? (
+                                                getStoredCardValidationFieldset(selectedInstrument)
+                                            ) : (
+                                                <CreditCardValidation
+                                                    shouldShowCardCodeField={shouldShowCardCodeField}
+                                                    shouldShowNumberField={shouldShowNumberField}
+                                                />
+                                            )
+                                        }
                                     />
-                                )
-                            }
-                        />
-                    )}
+                                )}
 
-                    {shouldShowCreditCardFieldset && !cardFieldset && (
-                        <CreditCardFieldset
-                            shouldShowCardCodeField={
-                                method.config.cardCode || method.config.cardCode === null
-                            }
-                            shouldShowCustomerCodeField={method.config.requireCustomerCode}
-                        />
-                    )}
+                                {shouldShowCreditCardFieldset && !cardFieldset && (
+                                    <CreditCardFieldset
+                                        shouldShowCardCodeField={
+                                            method.config.cardCode || method.config.cardCode === null
+                                        }
+                                        shouldShowCustomerCodeField={method.config.requireCustomerCode}
+                                    />
+                                )}
 
-                    {shouldShowCreditCardFieldset && cardFieldset}
+                                {shouldShowCreditCardFieldset && cardFieldset}
 
-                    {isInstrumentFeatureAvailableProp && (
-                        <StoreInstrumentFieldset
-                            instrumentId={selectedInstrument && selectedInstrument.bigpayToken}
-                        />
-                    )}
-                </div>
-            </LoadingOverlay>
+                                {isInstrumentFeatureAvailableProp && (
+                                    <StoreInstrumentFieldset
+                                        instrumentId={selectedInstrument && selectedInstrument.bigpayToken}
+                                    />
+                                )}
+                            </div>
+                        </LoadingOverlay>
+                        {billingSection}
+                    </>
+                )}
+            </BillingAddressSectionContext.Consumer>
         );
     }
 

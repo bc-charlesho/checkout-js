@@ -18,13 +18,11 @@
 }
 
 .checkout-step {
-    border-bottom: container("border");
+    border: container("border");
+    border-radius: 8px;
     counter-increment: $checkoutStep-counter;
+    margin-bottom: spacing("single");
     padding: #{spacing("fifth") + spacing("fifth")} 0 0;
-
-    &:last-child {
-        border: 0;
-    }
 }
 
 .checkout-view-header {
@@ -133,6 +131,12 @@
 .stepHeader-title {
     margin: 0 0 0 $checkoutStep-header-figure-margin;
     min-width: 9rem;
+}
+
+.checkout-step--payment {
+    .stepHeader {
+        margin-bottom: spacing("half");
+    }
 }
 
 .remove-checkout-step-numbers {

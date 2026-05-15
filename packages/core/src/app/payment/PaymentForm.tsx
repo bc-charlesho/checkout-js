@@ -12,7 +12,7 @@ import { FormContext } from '@bigcommerce/checkout/ui';
 
 import { isExperimentEnabled } from '../common/utility';
 import { TermsConditions } from '../termsConditions';
-import { Fieldset, Form, Legend } from '../ui/form';
+import { Fieldset, Form } from '../ui/form';
 
 import { useBillingAddressSection } from './BillingAddressContext';
 import getPaymentValidationSchema from './getPaymentValidationSchema';
@@ -254,13 +254,7 @@ const PaymentMethodListFieldset: FunctionComponent<PaymentMethodListFieldsetProp
     );
 
     return (
-        <Fieldset
-            legend={
-                <Legend>
-                    <TranslatedString id="payment.payment_methods_text" />
-                </Legend>
-            }
-        >
+        <Fieldset>
             {!isPaymentDataRequired() && <StoreCreditOverlay />}
 
             <Extension region={ExtensionRegion.PaymentPaymentMethodListBefore}/>

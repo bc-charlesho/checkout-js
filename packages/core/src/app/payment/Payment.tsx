@@ -64,6 +64,7 @@ import {
     getUniquePaymentMethodId,
     PaymentMethodId,
     PaymentMethodProviderType,
+    PaymentMethodType,
 } from './paymentMethod';
 
 interface PaymentMethodSelectionParams {
@@ -708,11 +709,16 @@ const Payment= (props: PaymentProps & WithCheckoutPaymentProps & WithLanguagePro
         selectedMethod && getUniquePaymentMethodId(selectedMethod.id, selectedMethod.gateway);
     const shouldShowPaymentForm = props.shouldShowSubmitPaymentButton || (!isEmpty(props.methods) && props.defaultMethod);
 
+    const isCreditCardMethod =
+        selectedMethod?.method === PaymentMethodType.CreditCard ||
+        selectedMethod?.type === PaymentMethodProviderType.Api;
+
     const billingSectionNode = (
         <BillingAddressSection
             ref={billingAddressRef}
             billingAddress={props.billingAddress}
             getFields={props.getBillingAddressFields}
+            hideHeading={isCreditCardMethod && !props.isUsingMultiShipping}
             isBillingSameAsShipping={billingSameAsShipping}
             isShippingRequired={props.isShippingRequired}
             isUsingMultiShipping={props.isUsingMultiShipping}
